@@ -1,19 +1,31 @@
-import { useState } from "react";
-import Login from "./Login";
-import Register from "./Register";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
-const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+export const loginUser = async (email, password) => {
+  const response = await fetch(`${API_BASE}/token/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
-  return (
-    <>
-      {isLogin ? (
-        <Login onSwitchToRegister={() => setIsLogin(false)} />
-      ) : (
-        <Register onSwitchToLogin={() => setIsLogin(true)} />
-      )}
-    </>
-  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Login failed");
+  }
+
+  return await response.json(); // { access, refresh }
 };
 
-export default Auth;
+export const fetchUserProfile = async (accessToken) => {
+  const response = await fetch(`${API_BASE}/users/me/`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch user profile");
+  }
+
+  return await response.json(); // { id, email, first_name, ... }
+};
