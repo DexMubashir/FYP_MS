@@ -286,10 +286,7 @@ const SupervisorDashboard = () => {
               <h3 className="text-lg font-medium text-gray-900">
                 FYP Announcements
               </h3>
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <FontAwesomeIcon icon={faBell} className="mr-2" />
-                New Announcement
-              </button>
+              {/* Removed redundant bell icon and button */}
             </div>
 
             <div className="space-y-4">
@@ -372,7 +369,7 @@ const SupervisorDashboard = () => {
                   <input
                     type="text"
                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Search projects..."
+                    placeholder="Search by student or project title..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -522,18 +519,14 @@ const SupervisorDashboard = () => {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">
-            FYP Supervisor Dashboard
+            Supervisor Dashboard
           </h1>
           <div className="flex items-center space-x-4">
-            <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              <span className="sr-only">View notifications</span>
-              <FontAwesomeIcon icon={faBell} className="h-6 w-6" />
-            </button>
             <div className="flex items-center">
               <div className="ml-3 relative">
                 <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                    <FontAwesomeIcon icon={faUserTie} />
+                  <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
+                    S
                   </div>
                   <span className="text-sm font-medium text-gray-700">
                     Supervisor

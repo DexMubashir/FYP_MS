@@ -8,25 +8,34 @@ const API_BASE =
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(
-    localStorage.getItem("access") || null
+    localStorage.getItem("access") || sessionStorage.getItem("access") || null
   );
   const [refreshToken, setRefreshToken] = useState(
-    localStorage.getItem("refresh") || null
+    localStorage.getItem("refresh") || sessionStorage.getItem("refresh") || null
   );
   const [loading, setLoading] = useState(true);
 
   const isAuthenticated = !!user;
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = true) => {
     try {
-      const data = await loginUser(email, password); // ✅ Only one request
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
+      const data = await loginUser(email, password);
+      if (rememberMe) {
+        localStorage.setItem("access", data.access);
+        localStorage.setItem("refresh", data.refresh);
+        sessionStorage.removeItem("access");
+        sessionStorage.removeItem("refresh");
+      } else {
+        sessionStorage.setItem("access", data.access);
+        sessionStorage.setItem("refresh", data.refresh);
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+      }
       setAccessToken(data.access);
       setRefreshToken(data.refresh);
       await fetchUser(data.access);
     } catch (err) {
-      throw err; // rethrow to display error in Login.jsx
+      throw err;
     }
   };
 
@@ -41,6 +50,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
+    sessionStorage.removeItem("access");
+    sessionStorage.removeItem("refresh");
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
@@ -56,7 +67,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated, login, logout, loading }}
+      value={{ user, isAuthenticated, login, logout, loading, accessToken }}
     >
       {children}
     </AuthContext.Provider>

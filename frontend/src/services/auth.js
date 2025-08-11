@@ -29,3 +29,23 @@ export const fetchUserProfile = async (accessToken) => {
 
   return await response.json(); // { id, email, first_name, ... }
 };
+
+export const registerUser = async (registrationData) => {
+  const response = await fetch(`${API_BASE}/auth/users/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(registrationData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(
+      error.email?.[0] ||
+        error.password?.[0] ||
+        error.detail ||
+        "Registration failed"
+    );
+  }
+
+  return await response.json();
+};

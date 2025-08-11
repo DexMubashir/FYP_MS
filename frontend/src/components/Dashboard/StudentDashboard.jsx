@@ -470,10 +470,6 @@ const StudentsDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">Student Dashboard</h1>
           <div className="flex items-center space-x-4">
-            <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              <span className="sr-only">View notifications</span>
-              <FaBell className="h-6 w-6" />
-            </button>
             <div className="flex items-center">
               <div className="ml-3 relative">
                 <div className="flex items-center space-x-2">

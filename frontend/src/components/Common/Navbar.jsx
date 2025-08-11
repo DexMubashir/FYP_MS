@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../../contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
@@ -7,11 +8,16 @@ import {
   faGraduationCap,
   faMoon,
   faSun,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+  getNotifications,
+  markNotificationRead,
+} from "../../services/announcements";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dashboardOpenMobile, setDashboardOpenMobile] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
   const menuRef = useRef();
 
   const toggleMenu = () => {
@@ -19,14 +25,14 @@ const Navbar = () => {
   };
 
   const toggleDashboardMobile = () => {
-    setDashboardOpenMobile(!dashboardOpenMobile);
+    setDashboardOpen(!dashboardOpen);
   };
 
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
-        setDashboardOpenMobile(false);
+        setDashboardOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -55,6 +61,40 @@ const Navbar = () => {
     }
   };
 
+  const { user, logout } = useContext(AuthContext);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifError, setNotifError] = useState("");
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    if (user) fetchNotifications();
+    // eslint-disable-next-line
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      setNotifError("");
+      const token =
+        localStorage.getItem("access") || sessionStorage.getItem("access");
+      const data = await getNotifications(token);
+      setNotifications(data);
+    } catch (err) {
+      setNotifError("Failed to load notifications");
+    }
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      const token =
+        localStorage.getItem("access") || sessionStorage.getItem("access");
+      await markNotificationRead(id, token);
+      fetchNotifications();
+    } catch (err) {
+      setNotifError("Failed to mark as read");
+    }
+  };
+
   return (
     <nav className="bg-white border-b shadow-sm">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -71,53 +111,190 @@ const Navbar = () => {
 
         {/* Right: Desktop Links */}
         <div className="hidden md:flex space-x-6 items-center">
-          {/* Dashboard dropdown for desktop */}
-          <div className="relative group">
-            <div className="flex items-center space-x-1 cursor-pointer">
-              <span className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200">
-                Dashboard
-              </span>
-              <svg
-                className="w-4 h-4 text-gray-500 group-hover:text-blue-600 transition duration-200"
-                fill="currentColor"
-                viewBox="0 0 20 20"
+          {/* Notification Bell */}
+          {user && (
+            <div className="relative">
+              <button
+                className="focus:outline-none"
+                onClick={() => setShowNotifications((s) => !s)}
               >
-                <path
-                  fillRule="evenodd"
-                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.063a.75.75 0 111.08 1.04l-4.25 4.657a.75.75 0 01-1.08 0l-4.25-4.657a.75.75 0 01.02-1.06z"
-                  clipRule="evenodd"
+                <FontAwesomeIcon
+                  icon={faBell}
+                  className="text-xl text-gray-600 hover:text-blue-600"
                 />
-              </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-md z-50 max-h-96 overflow-y-auto">
+                  <div className="p-2 border-b font-semibold">
+                    Notifications
+                  </div>
+                  {notifError && (
+                    <div className="text-red-600 text-xs p-2">{notifError}</div>
+                  )}
+                  {notifications.length === 0 ? (
+                    <div className="p-2 text-gray-500">No notifications</div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-2 border-b last:border-b-0 ${
+                          n.read ? "bg-white" : "bg-blue-50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-medium">
+                              {n.type.toUpperCase()}
+                            </span>
+                            : {n.message}
+                            {n.link && (
+                              <a
+                                href={n.link}
+                                className="text-blue-600 ml-2 underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                View
+                              </a>
+                            )}
+                          </div>
+                          {!n.read && (
+                            <button
+                              onClick={() => handleMarkRead(n.id)}
+                              className="text-xs text-blue-600 ml-2"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {new Date(n.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-
-            <div className="absolute left-0 mt-2 hidden group-hover:flex flex-col bg-white shadow-lg rounded-md transition-all duration-300 ease-in-out z-10 min-w-max">
-              <Link
-                to="/admin-dashboard"
-                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
-              >
-                Admin Dashboard
-              </Link>
+          )}
+          {/* Dashboard link (role-based) */}
+          {user?.role === "admin" && (
+            <Link
+              to="/admin-dashboard"
+              className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+            >
+              Dashboard
+            </Link>
+          )}
+          {user?.role === "student" && (
+            <>
               <Link
                 to="/student-dashboard"
-                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
               >
-                Student Dashboard
+                Dashboard
               </Link>
               <Link
-                to="/supervisor-dashboard"
-                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap"
+                to="/student/proposals"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
               >
-                Supervisor Dashboard
+                Proposals
               </Link>
-            </div>
-          </div>
-
-          <Link
-            to="/projects"
-            className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
-          >
-            Projects
-          </Link>
+              <Link
+                to="/student/projects"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Projects
+              </Link>
+              <Link
+                to="/student/milestones"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Milestones
+              </Link>
+              <Link
+                to="/student/submissions"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Submissions
+              </Link>
+              <Link
+                to="/student/documents"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Documents
+              </Link>
+              <Link
+                to="/student/evaluations"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Evaluations
+              </Link>
+              <Link
+                to="/groups"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Groups
+              </Link>
+            </>
+          )}
+          {user?.role === "supervisor" && (
+            <>
+              <Link
+                to="/supervisor-dashboard"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/supervisor/proposals"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Proposals
+              </Link>
+              <Link
+                to="/supervisor/projects"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Projects
+              </Link>
+              <Link
+                to="/supervisor/milestones"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Milestones
+              </Link>
+              <Link
+                to="/supervisor/evaluations"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Evaluations
+              </Link>
+              <Link
+                to="/supervisor/submissions"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Submissions
+              </Link>
+              <Link
+                to="/supervisor/documents"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Documents
+              </Link>
+              <Link
+                to="/groups"
+                className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
+              >
+                Groups
+              </Link>
+            </>
+          )}
           <Link
             to="/announcements"
             className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors duration-200"
@@ -130,6 +307,14 @@ const Navbar = () => {
           >
             Profile
           </Link>
+          {user && (
+            <button
+              onClick={logout}
+              className="ml-4 text-sm text-red-600 hover:text-red-800"
+            >
+              Logout
+            </button>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -155,50 +340,136 @@ const Navbar = () => {
         }`}
       >
         <div className="flex flex-col space-y-4 pt-4">
-          {/* Mobile Dashboard Toggle */}
-          <div>
-            <button
-              onClick={toggleDashboardMobile}
-              className="w-full text-left text-gray-600 hover:text-blue-600 text-sm font-medium flex justify-between items-center"
+          {/* Mobile Dashboard (role-based) */}
+          {user?.role === "admin" && (
+            <Link
+              to="/admin-dashboard"
+              onClick={toggleMenu}
+              className="text-gray-600 hover:text-blue-600 text-sm"
             >
               Dashboard
-              <span>{dashboardOpenMobile ? "▲" : "▼"}</span>
-            </button>
-            {dashboardOpenMobile && (
-              <div className="flex flex-col mt-2 space-y-2 pl-4">
-                <Link
-                  to="/admin-dashboard"
-                  onClick={toggleMenu}
-                  className="text-gray-600 hover:text-blue-600 text-sm"
-                >
-                  Admin Dashboard
-                </Link>
-                <Link
-                  to="/student-dashboard"
-                  onClick={toggleMenu}
-                  className="text-gray-600 hover:text-blue-600 text-sm"
-                >
-                  Student Dashboard
-                </Link>
-                <Link
-                  to="/supervisor-dashboard"
-                  onClick={toggleMenu}
-                  className="text-gray-600 hover:text-blue-600 text-sm"
-                >
-                  Supervisor Dashboard
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Other Mobile Links */}
-          <Link
-            to="/projects"
-            onClick={toggleMenu}
-            className="text-gray-600 hover:text-blue-600 text-sm"
-          >
-            Projects
-          </Link>
+            </Link>
+          )}
+          {user?.role === "student" && (
+            <>
+              <Link
+                to="/student-dashboard"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/student/proposals"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Proposals
+              </Link>
+              <Link
+                to="/student/projects"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Projects
+              </Link>
+              <Link
+                to="/student/milestones"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Milestones
+              </Link>
+              <Link
+                to="/student/submissions"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Submissions
+              </Link>
+              <Link
+                to="/student/documents"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Documents
+              </Link>
+              <Link
+                to="/student/evaluations"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Evaluations
+              </Link>
+              <Link
+                to="/groups"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Groups
+              </Link>
+            </>
+          )}
+          {user?.role === "supervisor" && (
+            <>
+              <Link
+                to="/supervisor-dashboard"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/supervisor/proposals"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Proposals
+              </Link>
+              <Link
+                to="/supervisor/projects"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Projects
+              </Link>
+              <Link
+                to="/supervisor/milestones"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Milestones
+              </Link>
+              <Link
+                to="/supervisor/evaluations"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Evaluations
+              </Link>
+              <Link
+                to="/supervisor/submissions"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Submissions
+              </Link>
+              <Link
+                to="/supervisor/documents"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Documents
+              </Link>
+              <Link
+                to="/groups"
+                onClick={toggleMenu}
+                className="text-gray-600 hover:text-blue-600 text-sm"
+              >
+                Groups
+              </Link>
+            </>
+          )}
           <Link
             to="/announcements"
             onClick={toggleMenu}
@@ -213,6 +484,14 @@ const Navbar = () => {
           >
             Profile
           </Link>
+          {user && (
+            <button
+              onClick={logout}
+              className="text-sm text-red-600 hover:text-red-800"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
     </nav>
